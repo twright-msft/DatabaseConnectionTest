@@ -15,8 +15,7 @@ namespace DatabaseConnectionTest
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                int iterations = 1;
+                int bookNumber = 1;
 
                 var options = new SqlRetryLogicOption()
                 {
@@ -72,7 +71,7 @@ namespace DatabaseConnectionTest
                     SqlCommand commandSelectServerName = new SqlCommand("SELECT @@SERVERNAME", sqlConnection);
                     commandSelectServerName.Connection = sqlConnection;
 
-                    var bookInsertString = String.Format("INSERT INTO Bookstore.dbo.Book VALUES ('Some title of a book - {0}','2022-01-01','Technology', 39.95)", iterations);
+                    var bookInsertString = String.Format("INSERT INTO Bookstore.dbo.Book VALUES ('Some title of a book - {0}','2022-01-01','Technology', 39.95)", bookNumber);
                     var bookCountString = String.Format("SELECT COUNT(*) FROM Bookstore.dbo.Book");
 
                     SqlCommand commandInsertBooks = new SqlCommand(bookInsertString, sqlConnection);
@@ -91,7 +90,7 @@ namespace DatabaseConnectionTest
                         _logger.LogError(ex.Message);
                     }
                 }
-
+                bookNumber++;
                 await Task.Delay(1000, stoppingToken);
             }
         }
