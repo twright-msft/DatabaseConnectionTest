@@ -4,6 +4,7 @@ namespace DatabaseConnectionTest
 {
     public class Worker : BackgroundService
     {
+        int i = 1;
         private readonly ILogger<Worker> _logger;
 
         public Worker(ILogger<Worker> logger)
@@ -15,8 +16,7 @@ namespace DatabaseConnectionTest
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                int bookNumber = 1;
-
+                
                 var options = new SqlRetryLogicOption()
                 {
                     // Tries 60 times before throwing an exception
@@ -62,35 +62,49 @@ namespace DatabaseConnectionTest
 
                 //connection string builder -> connection string
                 var connectionString = connectionStringBuilder.ToString();
-
                 var sqlConnection = new SqlConnection(connectionString);
                 sqlConnection.RetryLogicProvider = retryLogicProvider;
 
                 using (sqlConnection)
                 {
+                    // DEMO_CUSTOMIZATION - Add/Remove/Change the SQL queries that you want to execute on the periodic interval.
+                    // DEMO_CUSTOMIZATION - Note: the queries below use three-part names to point to the table - ie. database.schema.table.
+                    // If you use a demo database name with a name other than demo or a different schema or table name, adjust acoordingly.
+                    // Make sure that your VALUE data set for the INSERT statement match your schema.
+
+                    //Get the current SQL instance name
                     SqlCommand commandSelectServerName = new SqlCommand("SELECT @@SERVERNAME", sqlConnection);
                     commandSelectServerName.Connection = sqlConnection;
 
-                    var bookInsertString = String.Format("INSERT INTO Bookstore.dbo.Book VALUES ('Some title of a book - {0}','2022-01-01','Technology', 39.95)", bookNumber);
-                    var bookCountString = String.Format("SELECT COUNT(*) FROM Bookstore.dbo.Book");
-
+                    //Insert some data into a table                    
+                    var bookInsertString = String.Format("INSERT INTO Demo.dbo.Book VALUES ('Some title of a book - {0}','2022-01-01','Technology', 39.95)", i);
                     SqlCommand commandInsertBooks = new SqlCommand(bookInsertString, sqlConnection);
+
+                    //Get the count of records in a table
+                    var bookCountString = String.Format("SELECT COUNT(*) FROM Demo.dbo.Book");
                     SqlCommand commandCountBooks = new SqlCommand(bookCountString, sqlConnection);
                     
                     try
                     {
                         sqlConnection.Open();
-                        _logger.LogInformation("ServerName: {0}", commandSelectServerName.ExecuteScalar());
-                        _logger.LogInformation("ServerVersion: {0}", sqlConnection.ServerVersion);
+
+                        //Execute the queries
                         commandInsertBooks.ExecuteScalar();
-                        _logger.LogInformation("Book Count: {0}", commandCountBooks.ExecuteScalar().ToString());
+                        var serverName = commandSelectServerName.ExecuteScalar();
+                        var bookCount = commandCountBooks.ExecuteScalar().ToString();
+
+                        //DEMO_CUSTOMIZATION - Change the logging output format as needed for the demo
+                        //Log the results of the queries
+                        _logger.LogInformation("ServerName: {0} \t ServerVersion: {1} \t Count: {2}", serverName, sqlConnection.ServerVersion, bookCount);                        
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex.Message);
                     }
                 }
-                bookNumber++;
+                i++;
+
+                // DEMO_CUSTOMIZATION - Change the frequency that the connection/query happens here
                 await Task.Delay(1000, stoppingToken);
             }
         }
